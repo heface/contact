@@ -40,7 +40,7 @@ class Contact:
                 address=%s;birthday=%s;mem=%s' % \
                 (self._name,self._telHome,self._telWork,self._telWork1,\
                 self._telCell,self._telCell1,self._telCell2,\
-                self._email,self._group,self._qq,self._department,self._team\
+                self._email,self._group,self._qq,self._department,self._team,\
                 self._address,self._birthday,self._mem,self._flag)
         
     def __repr__(self):
@@ -210,16 +210,16 @@ def parseCSVToDict(filename):
     for line in f.readlines():
         a = line.split(",")        
         contactDict['name'].append(_format(a[0])+_format(a[1]))
-        contactDict['telHome'].append(_format(a[6]),telWork=_format(a[13]))
-        contactDict['telWork'].append(_format(a[14]),telCell=_format(a[18]))
-        contactDict['telCell'].append(_format(a[19]),telCell2=_format(a[20]))
+        contactDict['telHome'].append(_format(a[6]))
+        contactDict['telWork'].append(_format(a[13]))
+        contactDict['telCell'].append(_format(a[18]))
         contactDict['email'].append(_format(a[16]))
         contactDict['c_group'].append(_format(a[23]))
         contactDict['qq'].append(_format(a[5]))
         contactDict['department'].append(_format(a[21]))
         contactDict['birthday'].append(_format(a[22]))
         contactDict['mem'].append(_format(a[15]))
-        contactDict['address'].append(_format(a[8])+_format(a[9])+_format(a[10])+_format(a[11])+_format(a[12])))
+        contactDict['address'].append(_format(a[8])+_format(a[9])+_format(a[10])+_format(a[11])+_format(a[12]))
         contactDict['team'].append('')
         contactDict['flag'].append('android')
     f.close()
@@ -279,8 +279,8 @@ def writeSql():
     db.close()#关闭数据库连接
     print('close db')
 
-def writeByDF(contactDict):
-    connect_info = 'mysql+pymysql://username:passwd@host:3306/dbname?charset=utf8'
+def writeByDF():
+    connect_info = 'mysql+pymysql://root:123456@127.0.0.1:3306/heLocalDB?charset=utf8'
     engine = create_engine(connect_info) #use sqlalchemy to build link-engine
 
     contactDict = parseCSVToDict("../data/2018-10-04-20-55-20-contact-14.csv")
@@ -288,25 +288,27 @@ def writeByDF(contactDict):
     df = pd.DataFrame(contactDict)
     #DataFrame.to_sql(name, con, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None, dtype=None)
     #dtype = {'id': INT(), 'name': CHAR(length=2), 'score': CHAR(length=2)
-    df.to_sql('Contact', engine, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None)
+    df.to_sql('Contact', engine, schema=None, if_exists='append', index=True, index_label='id', chunksize=None)
 
     contactDict = parseContactToDict("../data/00001.vcf")
     df = pd.DataFrame(contactDict)
-    df.to_sql('Contact', engine, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None)
+    df.to_sql('Contact', engine, schema=None, if_exists='append', index=True, index_label='id', chunksize=None)
 
     contactDict = parseContactToDict("../data/00002.vcf")
     df = pd.DataFrame(contactDict)
-    df.to_sql('Contact', engine, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None)
+    df.to_sql('Contact', engine, schema=None, if_exists='append', index=True, index_label='id', chunksize=None)
 
     contactDict = parseContactToDict("../data/PHONE00001.vcf")
     df = pd.DataFrame(contactDict)
-    df.to_sql('Contact', engine, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None)
+    df.to_sql('Contact', engine, schema=None, if_exists='append', index=True, index_label='id', chunksize=None)
     
 if __name__ == "__main__":
-    contactList = parseCSVContact(\
-            "../data/2018-10-04-20-55-20-contact-14.csv")
-    for item in contactList[1:3]:
-        print(item)
+    writeByDF()
+
+    #contactList = parseCSVContact(\
+    #        "../data/2018-10-04-20-55-20-contact-14.csv")
+    #for item in contactList[1:3]:
+    #    print(item)
     #generateContactVCF(contactList)
     
     #parseCSVContact("D:/tmp/contact/testContact.csv")
