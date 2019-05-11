@@ -143,8 +143,9 @@ def parseContact(filename):
     for item in contactList:
         print(item)
 
-def parseContactToDict(filename):
-    contactDict = {'name':[],'telHome':[],'telWork':[],'telCell':[],
+def parseAndroidContactToDict(filename,condactDict = null):
+    if contactDict == null:
+        contactDict = {'name':[],'telHome':[],'telWork':[],'telCell':[],
         'email':[],'c_group':[],'qq':[],'department':[],'team':[],
         'address':[],'birthday':[],'mem':[],'flag':[]}
     '''测试华为手机导出的通讯录格式，以便将csv格式的通讯录,
@@ -155,7 +156,8 @@ def parseContactToDict(filename):
     for line in f.readlines():
         if line.find('END:VCARD')>=0:
             flag = False
-            contactList.append(processContact(strBuf))
+            processContactToDict(processContact(strBuf),contactDict)
+            #contactList.append(processContact(strBuf))
             strBuf = []
             continue
         if flag:
@@ -283,22 +285,21 @@ def writeByDF():
     connect_info = 'mysql+pymysql://root:123456@127.0.0.1:3306/heLocalDB?charset=utf8'
     engine = create_engine(connect_info) #use sqlalchemy to build link-engine
 
-    contactDict = parseCSVToDict("../data/2018-10-04-20-55-20-contact-14.csv")
-    
+    contactDict = parseCSVToDict("../data/2018-10-04-20-55-20-contact-14.csv")    
     df = pd.DataFrame(contactDict)
     #DataFrame.to_sql(name, con, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None, dtype=None)
     #dtype = {'id': INT(), 'name': CHAR(length=2), 'score': CHAR(length=2)
     df.to_sql('Contact', engine, schema=None, if_exists='append', index=True, index_label='id', chunksize=None)
 
-    contactDict = parseContactToDict("../data/00001.vcf")
+    contactDict = parseAndroidContactToDict("../data/00001.vcf",contactDict)
     df = pd.DataFrame(contactDict)
     df.to_sql('Contact', engine, schema=None, if_exists='append', index=True, index_label='id', chunksize=None)
 
-    contactDict = parseContactToDict("../data/00002.vcf")
+    contactDict = parseAndroidContactToDict("../data/00002.vcf",contactDict)
     df = pd.DataFrame(contactDict)
     df.to_sql('Contact', engine, schema=None, if_exists='append', index=True, index_label='id', chunksize=None)
 
-    contactDict = parseContactToDict("../data/PHONE00001.vcf")
+    contactDict = parseAndroidContactToDict("../data/PHONE00001.vcf",contactDict)
     df = pd.DataFrame(contactDict)
     df.to_sql('Contact', engine, schema=None, if_exists='append', index=True, index_label='id', chunksize=None)
     
