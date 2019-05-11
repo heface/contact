@@ -6,13 +6,16 @@ Created on Thu Feb 14 15:41:31 2019
 """
 
 import base64
+import pandas as pd
+from sqlalchemy import create_engine
+from sqlalchemy.types import CHAR,INT
 
 class Contact:
-    def __init__(self,name='',telHome='',telWork='',telWork1='',\
+    def __init__(self,id=0,name='',telHome='',telWork='',telWork1='',\
             telCell='',telCell1='',telCell2='',\
-            email='',group='',qq='',department='',\
-            address='',birthday='',mem=''):           
-
+            email='',group='',qq='',department='',team='',\
+            address='',birthday='',mem='',flag=''):           
+        self._id = id                 #自增主键
         self._name = name             #姓名
         self._telHome = telHome       #home tel
         self._telWork = telWork       #工作电话
@@ -24,9 +27,11 @@ class Contact:
         self._group = group           #分组
         self._qq = qq                 #QQ号码
         self._department = department #公司/部门
+        self._team = team             #团队
         self._address = address       #地址
         self._birthday = birthday     #生日
         self._mem = mem               #备注
+        self._flag = flag             #来源标记
 
     def __str__(self):
         return 'name=%s;telHome=%s;telWork=%s;telWork1=%s;\
@@ -35,8 +40,8 @@ class Contact:
                 address=%s;birthday=%s;mem=%s' % \
                 (self._name,self._telHome,self._telWork,self._telWork1,\
                 self._telCell,self._telCell1,self._telCell2,\
-                self._email,self._group,self._qq,self._department,\
-                self._address,self._birthday,self._mem)
+                self._email,self._group,self._qq,self._department,self._team\
+                self._address,self._birthday,self._mem,self._flag)
         
     def __repr__(self):
         return 'name=%s;telCell=%s;telWork=%s;email=%s;group=%s' % \
@@ -91,8 +96,28 @@ def processContact(contact):
         if item.find(group) == 0:
             contactInstance._group = _getGroup(item[59:-1])
     return contactInstance
- 
- 
+
+def processContactToDict(contact,conDict):
+    name = 'FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:'
+    telCell = 'TEL;CELL:'
+    telWork = 'TEL;WORK:'
+    email = 'EMAIL;HOME:'
+    group = 'X-GROUP-MEMBERSHIP;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:'
+
+    for item in contact:
+        #print("item=%s" % item)
+        if item.find(name) == 0:
+            conDict['name'].append(_getName(item[43:-1]))
+        if item.find(telCell) == 0:
+            conDict['telCell'].append(item[9:-1])
+        if item.find(telWork) == 0:
+            conDict['telWork'].append(item[9:-1])
+        if item.find(email) == 0:
+            conDict['email'].append(item[11:-1])
+        if item.find(group) == 0:
+            conDict['group'].append(_getGroup(item[59:-1]))
+
+
 def parseContact(filename):
     contactList = []
     '''测试华为手机导出的通讯录格式，以便将csv格式的通讯录,
@@ -118,6 +143,33 @@ def parseContact(filename):
     for item in contactList:
         print(item)
 
+def parseContactToDict(filename):
+    contactDict = {'name':[],'telHome':[],'telWork':[],'telCell':[],
+        'email':[],'c_group':[],'qq':[],'department':[],'team':[],
+        'address':[],'birthday':[],'mem':[],'flag':[]}
+    '''测试华为手机导出的通讯录格式，以便将csv格式的通讯录,
+    整理成符合华为的存储格式导入'''   
+    f = open(filename,"r")
+    strBuf = []
+    flag = False
+    for line in f.readlines():
+        if line.find('END:VCARD')>=0:
+            flag = False
+            contactList.append(processContact(strBuf))
+            strBuf = []
+            continue
+        if flag:
+            strBuf.append(line)
+            continue
+        if line.find('BEGIN:VCARD')>=0:
+            flag = True
+            continue
+    f.close()
+    print('--------------contact list--------------')
+    for item in contactDict:
+        print(item)    
+    return contactDict
+        
 def _format(arrayItem):
     '''针对读入的通讯录数据，去掉双引号和空格'''
     if len(arrayItem) >= 2:
@@ -128,7 +180,7 @@ def _format(arrayItem):
 
 def parseCSVContact(filename):
     '''解析csv格式的通讯录备份文件，生成华为导出格式的通讯录文件'''
-    contactList = []    
+    contactList = []
     f = open(filename,"r",encoding='gbk')
     for line in f.readlines():
         a = line.split(",")
@@ -149,6 +201,35 @@ def parseCSVContact(filename):
     #    print(item)    
     return contactList
 
+def parseCSVToDict(filename):
+    '''解析csv格式的通讯录备份文件，生成字典类型'''
+    contactDict = {'name':[],'telHome':[],'telWork':[],'telCell':[],
+        'email':[],'c_group':[],'qq':[],'department':[],'team':[],
+        'address':[],'birthday':[],'mem':[],'flag':[]}
+    f = open(filename,"r",encoding='gbk')
+    for line in f.readlines():
+        a = line.split(",")        
+        contactDict['name'].append(_format(a[0])+_format(a[1]))
+        contactDict['telHome'].append(_format(a[6]),telWork=_format(a[13]))
+        contactDict['telWork'].append(_format(a[14]),telCell=_format(a[18]))
+        contactDict['telCell'].append(_format(a[19]),telCell2=_format(a[20]))
+        contactDict['email'].append(_format(a[16]))
+        contactDict['c_group'].append(_format(a[23]))
+        contactDict['qq'].append(_format(a[5]))
+        contactDict['department'].append(_format(a[21]))
+        contactDict['birthday'].append(_format(a[22]))
+        contactDict['mem'].append(_format(a[15]))
+        contactDict['address'].append(_format(a[8])+_format(a[9])+_format(a[10])+_format(a[11])+_format(a[12])))
+        contactDict['team'].append('')
+        contactDict['flag'].append('android')
+    f.close()
+
+    print('--------------contact list--------------')
+    #for item in contactDict:
+    #    print(item)    
+    return contactDict
+    
+    
 def _writeContact(f,contact):
     f.write("BEGIN:VCARD\n")
     #姓名
@@ -198,7 +279,29 @@ def writeSql():
     db.close()#关闭数据库连接
     print('close db')
 
+def writeByDF(contactDict):
+    connect_info = 'mysql+pymysql://username:passwd@host:3306/dbname?charset=utf8'
+    engine = create_engine(connect_info) #use sqlalchemy to build link-engine
 
+    contactDict = parseCSVToDict("../data/2018-10-04-20-55-20-contact-14.csv")
+    
+    df = pd.DataFrame(contactDict)
+    #DataFrame.to_sql(name, con, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None, dtype=None)
+    #dtype = {'id': INT(), 'name': CHAR(length=2), 'score': CHAR(length=2)
+    df.to_sql('Contact', engine, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None)
+
+    contactDict = parseContactToDict("../data/00001.vcf")
+    df = pd.DataFrame(contactDict)
+    df.to_sql('Contact', engine, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None)
+
+    contactDict = parseContactToDict("../data/00002.vcf")
+    df = pd.DataFrame(contactDict)
+    df.to_sql('Contact', engine, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None)
+
+    contactDict = parseContactToDict("../data/PHONE00001.vcf")
+    df = pd.DataFrame(contactDict)
+    df.to_sql('Contact', engine, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None)
+    
 if __name__ == "__main__":
     contactList = parseCSVContact(\
             "../data/2018-10-04-20-55-20-contact-14.csv")
